@@ -73,39 +73,70 @@ const FoodDetails: React.FC = () => {
 
   useEffect(() => {
     async function loadFood(): Promise<void> {
-      // Load a specific food with extras based on routeParams id
+      api.get(`/foods/${routeParams.id}`).then(response => {
+        setFood(response.data);
+
+        const extraList = response.data.extras as Extra[];
+
+        extraList.map((extr: Extra) => {
+          extr.quantity = 0;
+          return extr;
+        });
+
+        setExtras(response.data.extras);
+      });
     }
 
     loadFood();
   }, [routeParams]);
 
   function handleIncrementExtra(id: number): void {
-    // Increment extra quantity
+    const newExtras = extras.map(ext => {
+      if (ext.id === id) {
+        ext.quantity += 1;
+      }
+      return ext;
+    });
+
+    setExtras(newExtras);
   }
 
   function handleDecrementExtra(id: number): void {
-    // Decrement extra quantity
+    const newExtras = extras.map(ext => {
+      if (ext.id === id && ext.quantity > 0) {
+        ext.quantity -= 1;
+      }
+      return ext;
+    });
+
+    setExtras(newExtras);
   }
 
   function handleIncrementFood(): void {
-    // Increment food quantity
+    setFoodQuantity(foodQuantity + 1);
   }
 
   function handleDecrementFood(): void {
-    // Decrement food quantity
+    if (foodQuantity > 1) {
+      setFoodQuantity(foodQuantity - 1);
+    }
   }
 
   const toggleFavorite = useCallback(() => {
-    // Toggle if food is favorite or not
+    setIsFavorite(!isFavorite);
   }, [isFavorite, food]);
 
   const cartTotal = useMemo(() => {
-    // Calculate cartTotal
+    const sumExt = extras.reduce((accum, ext) => {
+      return accum + ext.quantity * ext.value;
+    }, 0);
+
+    const sum = sumExt + food.price * foodQuantity;
+
+    return sum;
   }, [extras, food, foodQuantity]);
 
-  async function handleFinishOrder(): Promise<void> {
-    // Finish the order and save on the API
-  }
+  async function handleFinishOrder(): Promise<void> {}
 
   // Calculate the correct icon name
   const favoriteIconName = useMemo(
@@ -179,7 +210,9 @@ const FoodDetails: React.FC = () => {
         <TotalContainer>
           <Title>Total do pedido</Title>
           <PriceButtonContainer>
-            <TotalPrice testID="cart-total">{cartTotal}</TotalPrice>
+            <TotalPrice testID="cart-total">
+              {formatValue(cartTotal)}
+            </TotalPrice>
             <QuantityContainer>
               <Icon
                 size={15}
