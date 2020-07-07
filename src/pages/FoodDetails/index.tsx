@@ -74,16 +74,17 @@ const FoodDetails: React.FC = () => {
   useEffect(() => {
     async function loadFood(): Promise<void> {
       api.get(`/foods/${routeParams.id}`).then(response => {
-        setFood(response.data);
-
-        const extraList = response.data.extras as Extra[];
-
-        extraList.map((extr: Extra) => {
-          extr.quantity = 0;
-          return extr;
+        setFood({
+          ...response.data,
+          formattedPrice: formatValue(response.data.price),
         });
 
-        setExtras(response.data.extras);
+        setExtras(
+          response.data.extras.map((extra: Omit<Extra, 'quantity'>) => ({
+            ...extra,
+            quantity: 0,
+          })),
+        );
       });
     }
 
@@ -91,25 +92,24 @@ const FoodDetails: React.FC = () => {
   }, [routeParams]);
 
   function handleIncrementExtra(id: number): void {
-    const newExtras = extras.map(ext => {
-      if (ext.id === id) {
-        ext.quantity += 1;
-      }
-      return ext;
-    });
-
-    setExtras(newExtras);
+    setExtras(
+      extras.map(extra =>
+        extra.id === id ? { ...extra, quantity: extra.quantity + 1 } : extra,
+      ),
+    );
   }
 
   function handleDecrementExtra(id: number): void {
-    const newExtras = extras.map(ext => {
-      if (ext.id === id && ext.quantity > 0) {
-        ext.quantity -= 1;
-      }
-      return ext;
-    });
+    const findExtra = extras.find(extra => extra.id === id);
 
-    setExtras(newExtras);
+    if (!findExtra) return;
+    if (findExtra.quantity === 0) return;
+
+    setExtras(
+      extras.map(extra =>
+        extra.id === id ? { ...extra, quantity: extra.quantity - 1 } : extra,
+      ),
+    );
   }
 
   function handleIncrementFood(): void {
@@ -122,7 +122,13 @@ const FoodDetails: React.FC = () => {
     }
   }
 
-  const toggleFavorite = useCallback(() => {
+  const toggleFavorite = useCallback(async () => {
+    if (isFavorite) {
+      api.delete(`/favorites/${food.id}`);
+    } else {
+      api.post(`/favorites/${food.id}`);
+    }
+
     setIsFavorite(!isFavorite);
   }, [isFavorite, food]);
 
